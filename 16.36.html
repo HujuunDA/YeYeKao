@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>采购管理</title>
+    <style>
+        /* --- 全局设置 --- */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            background: #f2f2f7; 
+            padding-bottom: 80px; 
+            touch-action: manipulation; 
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        /* 头部导航 */
+        .header-bar { 
+            background: #007aff; color: white; padding: 12px 15px; 
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header-bar h1 { margin: 0; font-size: 18px; font-weight: 600; }
+        .back-btn { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .back-btn:active { background: rgba(255,255,255,0.4); }
+
+        /* 选项卡 Tabs */
+        .tabs { display: flex; background: white; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 50px; z-index: 9; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: #f0f0f0; border-radius: 8px; margin: 0 5px; font-weight: 600; color: #888; transition: 0.2s; cursor: pointer; }
+        .tab-btn.active { background: #007aff; color: white; box-shadow: 0 2px 5px rgba(0,122,255,0.3); }
+
+        /* 内容容器 */
+        .tab-content { display: none; padding: 15px; animation: fadeIn 0.2s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 📦 选品列表样式 */
+        .category-group { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .category-header { 
+            background: #f9f9f9; padding: 10px 15px; font-size: 14px; color: #007aff; 
+            font-weight: bold; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;
+        }
+        .delete-cat-btn { background: none; border: none; color: #ff3b30; font-size: 16px; cursor: pointer; padding: 0 5px; opacity: 0.7; }
+        .delete-cat-btn:active { opacity: 1; }
+        
+        .item-row { 
+            padding: 12px 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; 
+            justify-content: space-between; transition: background 0.2s;
+        }
+        .item-row:last-child { border-bottom: none; }
+        .item-row:active { background: #f5f5f5; }
+        
+        input[type="checkbox"] { width: 22px; height: 22px; margin-right: 12px; accent-color: #007aff; cursor: pointer; }
+        .item-label { flex-grow: 1; font-size: 16px; color: #333; }
+        
+        .delete-item { border: none; background: none; font-size: 18px; padding: 5px 10px; color: #ccc; cursor: pointer; }
+        .delete-item:active { color: #ff3b30; }
+
+        /* 数量输入框 (选品库) */
+        .quantity-picker { display: flex; align-items: center; gap: 5px; margin-right: 10px; }
+        .quantity-input { 
+            width: 40px; padding: 5px; border: 1px solid #ddd; border-radius: 6px; 
+            text-align: center; font-size: 16px; outline: none; background: #fafafa;
+        }
+        .qty-btn { 
+            background: #e0e0e0; border: none; border-radius: 50%; width: 24px; height: 24px; 
+            font-size: 16px; font-weight: bold; line-height: 1; cursor: pointer;
+        }
+
+        /* 📋 购物车/清单样式 */
+        .cart-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .cart-row { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; transition: background 0.3s; }
+        .cart-row:last-child { border-bottom: none; }
+        
+        .cart-row.done { background-color: #f0fdf4; }
+        .cart-row.done .item-name { text-decoration: line-through; color: #aaa; }
+        
+        .item-info { flex: 1; margin-right: 10px; min-width: 0; }
+        .item-name { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-qty { font-size: 12px; color: #888; margin-top: 2px; }
+
+        .price-input { 
+            width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; 
+            text-align: right; font-size: 16px; font-weight: bold; color: #333; background: #fafafa; outline: none;
+            transition: border 0.2s, background 0.2s;
+        }
+        .price-input:focus { border-color: #007aff; background: white; box-shadow: 0 0 0 2px rgba(0,122,255,0.1); }
+        .cart-row.done .price-input { color: #34c759; border-color: #c6f6d5; background: white; }
+
+        /* 🌟 添加栏（改为只留一个按钮） */
+        .add-bar { display: flex; justify-content: center; margin-top: 20px; padding: 0 5px; }
+        .primary-btn { 
+            background: #007aff; color: white; border: none; padding: 12px 15px; border-radius: 10px; 
+            font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.3); 
+            display: flex; align-items: center; justify-content: center; width: 100%; max-width: 300px;
+        }
+        .primary-btn:active { transform: scale(0.96); }
+        
+        .clear-btn { background: #ff3b30; color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; margin-top: 20px; font-weight: bold; font-size: 16px; cursor: pointer; }
+
+        /* 底部总计栏 */
+        .total-bar { 
+            background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(10px); color: white; 
+            padding: 15px 20px; position: fixed; bottom: 0; left: 0; width: 100%; box-sizing: border-box; 
+            display: flex; justify-content: space-between; align-items: center; z-index: 20;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1); padding-bottom: max(15px, env(safe-area-inset-bottom));
+        }
+        .copy-btn { background: #34c759; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; cursor: pointer; }
+        
+        #saveIndicator { position: fixed; top: 65px; right: 15px; background: rgba(0,0,0,0.7); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; z-index: 99; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        #saveIndicator.show { opacity: 1; }
+
+        /* --- 模态对话框样式 --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .modal-overlay.open .modal-content {
+            transform: scale(1);
+        }
+        .modal-header {
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #eee;
+        }
+        .modal-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .modal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .modal-field label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .modal-input, .modal-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background: #f8f8f8;
+            transition: border-color 0.2s;
+        }
+        .modal-input:focus, .modal-select:focus {
+            border-color: #007aff;
+            background: white;
+        }
+        .modal-footer {
+            display: flex;
+            padding: 15px 20px;
+            gap: 10px;
+            border-top: 1px solid #eee;
+            justify-content: flex-end;
+        }
+        .modal-btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+        .modal-btn.cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .modal-btn.save {
+            background: #ff9500; 
+            color: white;
+        }
+        .modal-btn:active {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="saveIndicator">☁️ 已同步</div>
+    
+    <div class="header-bar">
+        <h1>🛒 采购助手</h1>
+        <button class="back-btn" onclick="window.location.href='index.html'">返回系统</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('pick')">📦 选品库</button>
+        <button class="tab-btn" onclick="switchTab('cart')">📋 采购单 (<span id="cartCount">0</span>)</button>
+    </div>
+
+    <div id="pickTab" class="tab-content active">
+        <div id="productList">
+            </div>
+        
+        <div class="add-bar">
+            <button class="primary-btn" onclick="openAddItemModal()">+ 添加新商品</button>
+        </div>
+        <div style="height: 60px;"></div>
+    </div>
+
+    <div id="cartTab" class="tab-content">
+        <div class="cart-container" id="cartList">
+            </div>
+        
+        <div style="padding: 0 20px;">
+            <button class="clear-btn" onclick="clearDone()">🧹 清除已买好的项目</button>
+        </div>
+        <div style="height: 100px;"></div>
+    </div>
+
+    <div class="total-bar" id="totalBar" style="display:none;">
+        <div>
+            <div style="font-size: 13px; color: #aaa;">预计支出</div>
+            <div style="font-size: 20px; font-weight: bold; font-family: monospace;" id="grandTotal">0</div>
+        </div>
+        <button class="copy-btn" onclick="copyText()">📋 复制清单</button>
+    </div>
+
+    <div id="addItemModal" class="modal-overlay" onclick="if(event.target === this) closeAddItemModal()">
+        <div class="modal-content">
+            <div class="modal-header">菜品信息</div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label for="modalItemName">名称</label>
+                    <input type="text" id="modalItemName" class="modal-input" placeholder="例如: 烤羊肉串">
+                </div>
+                <div class="modal-field" style="display: none;">
+                    <label for="modalItemPrice">价格 (Ks)</label>
+                    <input type="number" id="modalItemPrice" class="modal-input" placeholder="0" value="0">
+                </div>
+                 <div class="modal-field">
+                    <label for="modalItemQty">数量</label>
+                    <input type="number" id="modalItemQty" class="modal-input" placeholder="1" value="1" min="1">
+                </div>
+                <div class="modal-field">
+                    <label for="modalCategorySelect">分类</label>
+                    <input list="categoryDatalist" id="modalCategorySelect" class="modal-input" placeholder="-- 选择或输入新分类 --">
+                    <datalist id="categoryDatalist"></datalist>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeAddItemModal()">取消</button>
+                <button class="modal-btn save" onclick="saveNewItem()">保存</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 核心配置 ---
+        const JSONBIN_ID = '69174442ae596e708f5901ae'; 
+        const JSONBIN_MASTER_KEY = '$2a$10$ol9N5tLV0G2AnDYaF4sO4O2l0RoR8OSXagA4IUy2wiwdntZDuzRh2';
+        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+        const CACHE_KEY = 'bbq_app_local_cache'; 
+
+        let globalData = { purchase_data: { productTemplate: {"默认":[]}, cartData: [] } };
+
+        function loadCache() { const c = localStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : null; }
+        function saveCache(data) { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); }
+        function debounce(fn, wait) { let t; return function(...args) { clearTimeout(t); t = setTimeout(()=>fn.apply(this, args), wait); }; }
+
+        async function init() {
+            const local = loadCache();
+            if (local) { globalData = local; renderAll(); }
+            
+            try {
+                const res = await fetch(JSONBIN_URL + '/latest', { headers: { 'X-Master-Key': JSONBIN_MASTER_KEY } });
+                if (!res.ok) throw new Error('网络请求失败');
+                const json = await res.json();
+                
+                if (json.record) {
+                    globalData = json.record;
+                    if(!globalData.purchase_data) globalData.purchase_data = { productTemplate: {"默认":[]}, cartData: [] };
+                    
+                    // 数据兼容性处理
+                    for (const cat in globalData.purchase_data.productTemplate) {
+                        globalData.purchase_data.productTemplate[cat] = globalData.purchase_data.productTemplate[cat].map(item => 
+                            typeof item === 'string' ? { name: item, qty: 1 } : item
+                        );
+                    }
+                    saveCache(globalData);
+                    if(document.activeElement.tagName !== 'INPUT') {
+                        renderAll();
+                    }
+                }
+            } catch(e) { 
+                console.log("离线模式或同步失败:", e); 
+                document.getElementById('saveIndicator').textContent = '⚠️ 离线模式';
+                document.getElementById('saveIndicator').classList.add('show');
+                setTimeout(()=>document.getElementById('saveIndicator').classList.remove('show'), 3000);
+            }
+        }
+
+        const saveData = debounce(async () => {
+            const ind = document.getElementById('saveIndicator');
+            ind.classList.add('show'); ind.textContent = '同步中...';
+            
+            saveCache(globalData);
+            try {
+                await fetch(JSONBIN_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_MASTER_KEY },
+                    body: JSON.stringify(globalData)
+                });
+                ind.textContent = '✅ 已同步';
+                setTimeout(()=>ind.classList.remove('show'), 2000);
+            } catch(e) { 
+                console.error("保存失败:", e);
+                ind.textContent = '⚠️ 仅本地保存'; 
+                setTimeout(()=>ind.classList.remove('show'), 3000);
+            }
+        }, 1500);
+
+        // --- 渲染逻辑 ---
+        function renderAll() {
+            renderProductList();
+            renderCategoryDatalist(); 
+            renderCart();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById(tab+'Tab').classList.add('active');
+            
+            if(tab === 'cart') {
+                document.getElementById('totalBar').style.display = 'flex';
+                renderCart(); 
+            } else {
+                document.getElementById('totalBar').style.display = 'none';
+                renderProductList(); 
+            }
+        }
+        
+        function renderProductList() { 
+            const container = document.getElementById('productList');
+            container.innerHTML = '';
+            const tmpl = globalData.purchase_data.productTemplate || {};
+            const cartNames = new Set((globalData.purchase_data.cartData || []).map(i => i.name));
+
+            const sortedCats = Object.keys(tmpl).sort();
+
+            for (const cat of sortedCats) {
+                const items = tmpl[cat];
+                if(!items || items.length === 0) {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'category-group';
+                    groupDiv.innerHTML = `
+                        <div class="category-header">
+                            <span>${cat} (空)</span>
+                            <button class="delete-cat-btn" onclick="deleteCategory('${cat}')">🗑️ 删除空分类</button>
+                        </div>
+                    `;
+                    container.appendChild(groupDiv);
+                    continue;
+                }
+
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'category-group';
+                
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.textContent = cat;
+                groupDiv.appendChild(header);
+                
+                items.forEach((item, index) => {
+                    const isChecked = cartNames.has(item.name);
+                    const row = document.createElement('div');
+                    row.className = 'item-row';
+                    row.innerHTML = `
+                        <div style="display:flex; align-items:center;">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked' : ''} 
+                                   onchange="toggleCartItem('${item.name}', this.checked, ${item.qty}); event.stopPropagation();">
+                            <span class="item-label" style="${isChecked ? 'color:#007aff; font-weight:bold;' : ''}">${item.name}</span>
+                        </div>
+                        <div class="quantity-picker" onclick="event.stopPropagation();">
+                            <button class="qty-btn" onclick="updateTemplateQty('${cat}', ${index}, -1)">-</button>
+                            <input type="number" 
+                                   class="quantity-input" 
+                                   value="${item.qty}" 
+                                   min="1"
+                                   onchange="updateTemplateQty('${cat}', ${index}, 0, this.value)">
+                            <button class="qty-btn" onclick="updateTemplateQty('${cat}', ${index}, 1)">+</button>
+                        </div>
+                        <button class="delete-item" onclick="deleteTemplate('${cat}', '${item.name}')">×</button>
+                    `;
+                    groupDiv.appendChild(row);
+                });
+                container.appendChild(groupDiv);
+            }
+        }
+        
+        function renderCategoryDatalist() { 
+            const datalist = document.getElementById('categoryDatalist');
+            const tmpl = globalData.purchase_data.productTemplate || {};
+            
+            let categories = Object.keys(tmpl).sort();
+            if(categories.length === 0) categories = ["默认"];
+            
+            let html = '';
+            categories.forEach(c => {
+                html += `<option value="${c}">${c}</option>`;
+            });
+            
+            datalist.innerHTML = html;
+        }
+
+        function renderCart() { 
+            const container = document.getElementById('cartList');
+            container.innerHTML = '';
+            const cart = globalData.purchase_data.cartData || [];
+            document.getElementById('cartCount').textContent = cart.length;
+            
+            if(cart.length === 0) {
+                container.innerHTML = '<div style="padding:40px; text-align:center; color:#999;">清单是空的</div>';
+                updateGrandTotal();
+                return;
+            }
+
+            cart.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = `cart-row ${item.purchased ? 'done' : ''}`;
+                row.id = `cart-row-${idx}`;
+                
+                row.innerHTML = `
+                    <input type="checkbox" ${item.purchased ? 'checked' : ''} onchange="togglePurchased(${idx}, this.checked)">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-qty">数量: ${item.qty || 1}</div>
+                    </div>
+                    <input type="number" 
+                           class="price-input" 
+                           placeholder="0" 
+                           value="${item.price || ''}" 
+                           inputmode="decimal" 
+                           id="price-input-${idx}"
+                           onfocus="this.select()"
+                           oninput="handlePriceInput(${idx}, this)">
+                `;
+                container.appendChild(row);
+            });
+            updateGrandTotal();
+        }
+
+        // --- 交互 ---
+
+        window.updateTemplateQty = (cat, index, delta, manualQty) => {
+            const item = globalData.purchase_data.productTemplate[cat][index];
+            let newQty = parseInt(manualQty) || item.qty + delta;
+            
+            if (newQty < 1 || isNaN(newQty)) newQty = 1;
+            
+            item.qty = newQty;
+            
+            const cartItem = globalData.purchase_data.cartData.find(i => i.name === item.name);
+            if(cartItem) {
+                cartItem.qty = newQty;
+                if(document.getElementById('cartTab').classList.contains('active')) {
+                     renderCart();
+                }
+            }
+
+            renderProductList(); 
+            saveData();
+        };
+
+        window.toggleCartItem = (name, checked, qty = 1) => {
+            let cart = globalData.purchase_data.cartData || [];
+            if(checked) {
+                if(!cart.find(i => i.name === name)) {
+                    cart.push({ name: name, purchased: false, price: '', qty: qty });
+                }
+            } else {
+                const idx = cart.findIndex(i => i.name === name);
+                if(idx > -1) cart.splice(idx, 1);
+            }
+            globalData.purchase_data.cartData = cart;
+            document.getElementById('cartCount').textContent = cart.length;
+            if(document.getElementById('pickTab').classList.contains('active')) {
+                renderProductList(); 
+            }
+            saveData();
+        };
+
+        window.openAddItemModal = () => {
+            document.getElementById('modalItemName').value = '';
+            document.getElementById('modalItemQty').value = 1;
+            document.getElementById('modalCategorySelect').value = Object.keys(globalData.purchase_data.productTemplate).sort()[0] || '默认';
+            document.getElementById('addItemModal').classList.add('open');
+            document.getElementById('modalItemName').focus();
+        };
+
+        window.closeAddItemModal = () => {
+            document.getElementById('addItemModal').classList.remove('open');
+        };
+
+        window.saveNewItem = () => {
+            const name = document.getElementById('modalItemName').value.trim();
+            let cat = document.getElementById('modalCategorySelect').value.trim() || '默认';
+            let qty = parseInt(document.getElementById('modalItemQty').value.trim()) || 1;
+            
+            if(!name) return alert("请输入商品名称");
+            if(qty < 1) qty = 1;
+
+            const tmpl = globalData.purchase_data.productTemplate;
+
+            const isDuplicate = Object.values(tmpl).flat().some(item => item.name === name);
+
+            if(!isDuplicate) {
+                if(!tmpl[cat]) tmpl[cat] = [];
+                
+                const newItem = { name: name, qty: qty };
+                tmpl[cat].push(newItem);
+                toggleCartItem(name, true, qty); 
+                
+                closeAddItemModal();
+                renderAll(); 
+                saveData();
+            } else {
+                alert("该商品已存在于选品库中");
+            }
+        };
+
+        window.handlePriceInput = (idx, inputEl) => {
+            const val = inputEl.value;
+            const item = globalData.purchase_data.cartData[idx];
+            item.price = val;
+            
+            const row = document.getElementById(`cart-row-${idx}`);
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            
+            if (val && parseFloat(val) > 0) {
+                if (!item.purchased) {
+                    item.purchased = true;
+                    checkbox.checked = true;
+                    row.classList.add('done');
+                }
+            } else if (val === '' && item.purchased) {
+                 item.purchased = false;
+                 checkbox.checked = false;
+                 row.classList.remove('done');
+            }
+
+            updateGrandTotal();
+            saveData();
+        };
+
+        window.togglePurchased = (idx, checked) => {
+            const item = globalData.purchase_data.cartData[idx];
+            item.purchased = checked;
+            const row = document.getElementById(`cart-row-${idx}`);
+            if(checked) row.classList.add('done');
+            else row.classList.remove('done');
+            updateGrandTotal();
+            saveData();
+        };
+        
+        window.deleteTemplate = (cat, name) => {
+            if(confirm(`从选品库中删除 "${name}" ?`)) {
+                const list = globalData.purchase_data.productTemplate[cat];
+                const idx = list.findIndex(item => item.name === name);
+                if(idx > -1) list.splice(idx, 1);
+                
+                toggleCartItem(name, false); 
+                renderProductList();
+                saveData();
+            }
+        };
+
+        window.deleteCategory = (cat) => {
+            if (confirm(`确认删除空分类 "${cat}" 吗?`)) {
+                delete globalData.purchase_data.productTemplate[cat];
+                renderAll();
+                saveData();
+            }
+        };
+
+        window.clearDone = () => {
+            const cart = globalData.purchase_data.cartData;
+            const doneCount = cart.filter(i => i.purchased).length;
+            if(doneCount === 0) return alert("没有已完成的项目");
+            
+            if(confirm(`清除 ${doneCount} 个已购买项目？`)) {
+                globalData.purchase_data.cartData = cart.filter(i => !i.purchased);
+                renderCart();
+                renderProductList();
+                saveData();
+            }
+        };
+
+        function updateGrandTotal() {
+            const cart = globalData.purchase_data.cartData || [];
+            let total = 0;
+            cart.forEach(i => {
+                const price = parseFloat(i.price);
+                if(i.purchased && !isNaN(price)) total += price;
+            });
+            document.getElementById('grandTotal').textContent = total.toLocaleString() + " Ks";
+        }
+        
+        function getTodayIncome() {
+            const income = globalData.income_data || { closedOrders: [] };
+            const todayStart = new Date().setHours(0,0,0,0);
+            
+            const todayRecs = income.closedOrders.filter(r => new Date(r.timestamp).getTime() >= todayStart);
+            const todayTotal = todayRecs.reduce((sum, r) => sum + r.total, 0);
+            return todayTotal;
+        }
+
+        // --- 已修改：增加盈利负数显示功能 ---
+        window.copyText = () => {
+            const cart = globalData.purchase_data.cartData;
+            const todayIncome = getTodayIncome(); 
+            const date = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+            let text = `📅 采购单 (${date}):\n`;
+            let totalPurchaseCost = 0;
+            
+            const purchasedItems = cart.filter(i => i.purchased);
+            const pendingItems = cart.filter(i => !i.purchased);
+            
+            text += '\n--- 已购买 (支出) ---\n';
+            if (purchasedItems.length === 0) {
+                 text += '（暂无记录）\n';
+            } else {
+                purchasedItems.forEach(i => {
+                    text += `✅ ${i.name} (x${i.qty || 1}) : ${i.price || '0'} Ks\n`;
+                    const price = parseFloat(i.price);
+                    if(!isNaN(price)) totalPurchaseCost += price;
+                });
+            }
+            
+            text += '\n--- 待购买 ---\n';
+            if (pendingItems.length === 0) {
+                 text += '（全部完成）\n';
+            } else {
+                pendingItems.forEach(i => text += `⬜ ${i.name} (x${i.qty || 1})\n`);
+            }
+
+            // 计算盈利 (收入 - 支出)
+            const profit = todayIncome - totalPurchaseCost;
+            
+            // 自动判断图标和数字显示
+            let profitStr = "";
+            if (profit >= 0) {
+                profitStr = `📈 今日盈利: ${profit.toLocaleString()} Ks`;
+            } else {
+                // 如果是亏损，直接使用 profit.toLocaleString() 它会自动带上负号
+                profitStr = `📉 今日亏损: ${profit.toLocaleString()} Ks`;
+            }
+
+            text += `\n💰 采购总支出: ${totalPurchaseCost.toLocaleString()} Ks\n`;
+            text += `💵 今日总收入: ${todayIncome.toLocaleString()} Ks\n`;
+            text += `✨ ${profitStr}\n`; 
+            text += '------------------------------';
+            
+            navigator.clipboard.writeText(text).then(() => alert("清单已复制"));
+        };
+
+        init();
+    </script>
+</body>
+</html>
+
