@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据中心-分列导出版</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { padding: 10px 20px; background: #FF8C00; color: white; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 14px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .total-amount { font-size: 26px; font-weight: 900; color: #FF4500; margin-top: 5px; }
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
+        .filter-btn { flex: 0 0 auto; min-width: 80px; padding: 12px 10px; border: none; background: white; border-radius: 10px; font-size: 13px; font-weight: bold; color: #666; }
+        .filter-btn.active { background: #FF8C00; color: white; }
+        .rank-card { background: #fff5e6; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #FFCC80; display: none; }
+        .rank-card.show { display: block; animation: fadeIn 0.3s; }
+        .rank-title { font-weight: bold; color: #FF8C00; margin-bottom: 10px; font-size: 15px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,140,0,0.1); font-size: 14px; }
+        .rank-num { background: #FF8C00; color: white; border-radius: 4px; padding: 0 6px; font-size: 12px; margin-right: 8px; }
+        .order-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 5px solid #FF8C00; position: relative; }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .table-tag { background: #FF8C00; color: white; padding: 2px 8px; border-radius: 5px; font-weight: bold; font-size: 14px; }
+        .item-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; color: #666; }
+        .order-footer { text-align: right; font-weight: 900; color: #FF4500; border-top: 1px dashed #eee; margin-top: 8px; padding-top: 8px; }
+        .del-btn { color: #ff3b30; border: 1px solid #ff3b30; background: none; font-size: 11px; padding: 2px 6px; border-radius: 5px; }
+        .bottom-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .action-btn { flex: 1; padding: 15px; border: none; border-radius: 12px; font-weight: bold; font-size: 14px; color: white; }
+        .btn-export { background: #34c759; }
+        .btn-clear { background: #ff3b30; }
+        .notes-text { font-size: 12px; color: #FF8C00; background: #fff9f0; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; }
+        /* 优惠显示专用颜色 */
+        .discount-text { color: #34c759; font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" class="back-btn">← 返回</a>
+        <h2 style="margin:0; font-size:20px;">数据中心</h2>
+    </div>
+
+    <div class="card">
+        <div style="font-size:14px; color:#888;" id="filter-title">今日营收</div>
+        <div class="total-amount" id="income-val">0 <small>Ks</small></div>
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="setFilter('today', this)">今日</button>
+        <button class="filter-btn" onclick="setFilter('week', this)">本周</button>
+        <button class="filter-btn" onclick="setFilter('month', this)">本月</button>
+        <button class="filter-btn" onclick="setFilter('rank', this)">销量排行</button>
+        <button class="filter-btn" onclick="setFilter('all', this)">全部订单</button>
+    </div>
+
+    <div id="rank-window" class="rank-card">
+        <div class="rank-title">📊 销量排行榜 (Top 10)</div>
+        <div id="rank-list"></div>
+    </div>
+
+    <div id="order-list"></div>
+
+    <div class="bottom-actions">
+        <button class="action-btn btn-export" onclick="exportData()">导出 Excel 详细清单</button>
+        <button class="action-btn btn-clear" onclick="clearData()">清除数据</button>
+    </div>
+
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDJAa0lKtUVvp3fRsC27XkfqJ5JPpwVj54", authDomain: "yeyekao.firebaseapp.com", projectId: "yeyekao", storageBucket: "yeyekao.appspot.com", messagingSenderId: "931221703674", appId: "1:931221703674:web:0391d4e08c4e0b51347072" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let allOrders = [];
+        let currentFilter = 'today';
+
+        async function loadData() {
+            const snap = await db.collection("orders").orderBy("timestamp", "desc").get();
+            allOrders = [];
+            snap.forEach(doc => allOrders.push({ id: doc.id, ...doc.data() }));
+            render();
+        }
+
+        function render() {
+            const now = new Date();
+            const filtered = allOrders.filter(o => {
+                if (!o.timestamp) return true;
+                const d = o.timestamp.toDate();
+                if (currentFilter === 'today') return d.toDateString() === now.toDateString();
+                if (currentFilter === 'week') return (now - d) < 7 * 86400000;
+                if (currentFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                return true;
+            });
+
+            let total = filtered.reduce((sum, o) => sum + o.total, 0);
+            document.getElementById('income-val').innerHTML = `${total.toLocaleString()} <small>Ks</small>`;
+
+            const sales = {};
+            filtered.forEach(o => o.items.forEach(i => sales[i.name] = (sales[i.name] || 0) + i.quantity));
+            const sorted = Object.entries(sales).sort((a,b) => b[1]-a[1]).slice(0, 10);
+            document.getElementById('rank-list').innerHTML = sorted.map((s, i) => `<div class="rank-item"><span><span class="rank-num">${i+1}</span>${s[0]}</span><b>${s[1]} 串/份</b></div>`).join('') || '暂无数据';
+
+            const rankWin = document.getElementById('rank-window');
+            const listWin = document.getElementById('order-list');
+            const title = document.getElementById('filter-title');
+
+            if (currentFilter === 'rank') {
+                rankWin.classList.add('show');
+                listWin.style.display = 'none';
+                title.innerText = "本期总销量统计";
+            } else {
+                rankWin.classList.remove('show');
+                listWin.style.display = 'block';
+                title.innerText = currentFilter === 'all' ? "全部订单营收" : (currentFilter === 'today' ? "今日营收" : (currentFilter === 'week' ? "本周营收" : "本月营收"));
+                listWin.innerHTML = filtered.map(o => `
+                    <div class="order-item">
+                        <div class="order-header">
+                            <div><span class="table-tag">${o.table}号桌</span> <small>👤 ${o.device || '默认'}</small></div>
+                            <button class="del-btn" onclick="deleteOrder('${o.id}')">删除</button>
+                        </div>
+                        <div style="font-size:11px; color:#999; margin-bottom:8px;">${o.timestamp?.toDate().toLocaleString() || ''}</div>
+                        ${o.notes ? `<div class="notes-text">📝 备注: ${o.notes}</div>` : ''}
+                        
+                        ${o.items.map(i => `<div class="item-row"><span>${i.name} x ${i.quantity}</span><span>${(i.price*i.quantity).toLocaleString()}</span></div>`).join('')}
+                        
+                        <div style="text-align:right; font-size:13px; margin-top:8px; border-top:1px dashed #eee; padding-top:8px;">
+                            ${o.discount > 0 ? `<div style="margin-bottom:4px;">优惠金额: <span class="discount-text">-${o.discount.toLocaleString()} Ks</span></div>` : ''}
+                        </div>
+                        <div class="order-footer" style="border-top:none; margin-top:0; padding-top:0;">合计: ${o.total.toLocaleString()} Ks</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function setFilter(f, btn) {
+            currentFilter = f;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            render();
+        }
+
+        async function deleteOrder(id) {
+            if(confirm("确定删除？")) {
+                await db.collection("orders").doc(id).delete();
+                loadData();
+            }
+        }
+
+        async function clearData() {
+            if(confirm("确定清空云端所有历史订单？")) {
+                const snap = await db.collection("orders").get();
+                const batch = db.batch();
+                snap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                loadData();
+            }
+        }
+
+        function exportData() {
+            if (allOrders.length === 0) return alert("没有数据可导出");
+
+            let csvContent = "\uFEFF"; 
+            csvContent += "日期时间,设备,桌号,菜品名称,数量,单价,小计(Ks),优惠金额,实收合计,备注\n";
+
+            allOrders.forEach(o => {
+                const time = o.timestamp ? o.timestamp.toDate().toLocaleString().replace(/,/g, " ") : "";
+                const device = o.device || "默认";
+                const table = o.table + "号桌";
+                const discount = o.discount || 0;
+                const finalTotal = o.total || 0;
+                const notes = o.notes ? o.notes.replace(/,/g, "，").replace(/\n/g, " ") : "";
+                
+                o.items.forEach((item, index) => {
+                    const subtotal = item.price * item.quantity;
+                    // 只在每单的第一行显示优惠和合计，后面行留空
+                    const dText = index === 0 ? discount : "";
+                    const tText = index === 0 ? finalTotal : "";
+                    csvContent += `${time},${device},${table},${item.name},${item.quantity},${item.price},${subtotal},${dText},${tText},${notes}\n`;
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const fileName = `明细账单_${new Date().toISOString().slice(0, 10)}.csv`;
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
