@@ -40,11 +40,10 @@
         .device-setter input { width: 100%; border: 1px solid #FFCC80; padding: 8px; border-radius: 8px; box-sizing: border-box; outline: none; font-weight: bold; }
         .modal-notes { background: #fef9e7; padding: 10px; border-radius: 8px; font-size: 14px; color: #d2691e; border-left: 4px solid #FF8C00; margin-top: 10px; }
         
-        /* 优惠功能新增样式 */
+        /* 优惠功能样式 */
         .discount-box { display: flex; align-items: center; justify-content: space-between; background: #fff0f0; padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid #ffcccb; }
         .discount-box label { font-size: 14px; color: #ff3b30; font-weight: bold; }
-        .discount-box input { width: 100px; border: 1px solid #ff3b30; padding: 8px; border-radius: 5px; text-align: right; color: #ff3b30; font-weight: bold; -moz-appearance: textfield; }
-        /* 隐藏数字输入框上下加减箭头 */
+        .discount-box input { width: 100px; border: 1px solid #ff3b30; padding: 8px; border-radius: 5px; text-align: right; color: #ff3b30; font-weight: bold; -moz-appearance: textfield; outline: none; }
         .discount-box input::-webkit-outer-spin-button,
         .discount-box input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
@@ -94,7 +93,7 @@
             
             <div class="discount-box">
                 <label>优惠金额 (Ks):</label>
-                <input type="number" id="discount-input" value="0" inputmode="numeric" oninput="calculateFinalTotal()" placeholder="0">
+                <input type="number" id="discount-input" value="" inputmode="numeric" oninput="calculateFinalTotal()" placeholder="输入金额">
             </div>
 
             <div id="modal-notes-display"></div>
@@ -186,7 +185,8 @@
 
         function calculateFinalTotal() {
             const order = all_orders[current_table] || {items: []};
-            const discount = parseFloat(document.getElementById('discount-input').value) || 0;
+            const discountValue = document.getElementById('discount-input').value;
+            const discount = parseFloat(discountValue) || 0;
             const subtotal = order.items.reduce((s, i) => s + (i.price * i.quantity), 0);
             const finalTotal = Math.max(0, subtotal - discount);
             document.getElementById('order-total-price').innerText = `合计: ${finalTotal.toLocaleString()} Ks`;
@@ -252,7 +252,8 @@
             const notesBox = document.getElementById('modal-notes-display');
             document.getElementById('order-title').innerText = `桌号 ${current_table} 详情`; 
             
-            document.getElementById('discount-input').value = 0;
+            // 打开时清空输入框内容
+            document.getElementById('discount-input').value = "";
 
             let h = ''; 
             let totalCount = 0;
