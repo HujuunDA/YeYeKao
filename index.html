@@ -43,7 +43,10 @@
         /* 优惠功能新增样式 */
         .discount-box { display: flex; align-items: center; justify-content: space-between; background: #fff0f0; padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid #ffcccb; }
         .discount-box label { font-size: 14px; color: #ff3b30; font-weight: bold; }
-        .discount-box input { width: 80px; border: 1px solid #ff3b30; padding: 5px; border-radius: 5px; text-align: right; color: #ff3b30; font-weight: bold; }
+        .discount-box input { width: 100px; border: 1px solid #ff3b30; padding: 8px; border-radius: 5px; text-align: right; color: #ff3b30; font-weight: bold; -moz-appearance: textfield; }
+        /* 隐藏数字输入框上下加减箭头 */
+        .discount-box input::-webkit-outer-spin-button,
+        .discount-box input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body>
@@ -91,7 +94,7 @@
             
             <div class="discount-box">
                 <label>优惠金额 (Ks):</label>
-                <input type="number" id="discount-input" value="0" oninput="calculateFinalTotal()" placeholder="0">
+                <input type="number" id="discount-input" value="0" inputmode="numeric" oninput="calculateFinalTotal()" placeholder="0">
             </div>
 
             <div id="modal-notes-display"></div>
@@ -181,7 +184,6 @@
 
         function switchTable(id) { current_table = id; localStorage.setItem(LAST_TABLE_KEY, id); document.getElementById('display-table-id').innerText = id; hideModal('table-modal'); renderMenu(); }
 
-        // 计算最终金额（减去优惠）
         function calculateFinalTotal() {
             const order = all_orders[current_table] || {items: []};
             const discount = parseFloat(document.getElementById('discount-input').value) || 0;
@@ -208,7 +210,7 @@
                     table: current_table,
                     items: order.items,
                     notes: order.notes || "",
-                    discount: discount, // 保存优惠金额
+                    discount: discount, 
                     total: finalTotal,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     device: localStorage.getItem(DEVICE_KEY) || "默认"
@@ -250,7 +252,6 @@
             const notesBox = document.getElementById('modal-notes-display');
             document.getElementById('order-title').innerText = `桌号 ${current_table} 详情`; 
             
-            // 重置优惠输入框
             document.getElementById('discount-input').value = 0;
 
             let h = ''; 
@@ -268,7 +269,7 @@
             }
 
             document.getElementById('modal-total-count').innerText = totalCount;
-            calculateFinalTotal(); // 更新弹窗里的合计显示
+            calculateFinalTotal(); 
             document.getElementById('order-modal').style.display = 'flex'; 
         }
 
