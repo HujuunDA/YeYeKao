@@ -10,7 +10,7 @@
         /* 核心修复：强制所有元素使用 border-box，防止边距撑破布局 */
         * { box-sizing: border-box; }
 
-        body { font-family: -apple-system, sans-serif; margin: 0; background: #f2f2f7; padding-bottom: 80px; }
+        body { font-family: -apple-system, sans-serif; margin: 0; background: #f2f2f7; padding-bottom: 100px; }
         
         .header-bar { 
             background: #007aff; 
@@ -46,31 +46,47 @@
         .category-header { background: #f9f9f9; padding: 10px 15px; color: #007aff; font-size: 14px; font-weight: bold; border-bottom: 1px solid #eee; }
         .item-row { padding: 12px 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; }
         
-        /* 价格输入框容器调整 */
         .price-wrapper { width: 100px; margin-left: 10px; }
         .price-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; text-align: right; font-size: 14px; font-weight: bold; color: #007aff; }
 
         .qty-ctrl { display: flex; align-items: center; gap: 10px; background: #f0f0f0; border-radius: 20px; padding: 4px 12px; }
         .qty-btn { width: 24px; border: none; background: none; font-size: 18px; color: #007aff; font-weight: bold; }
         
-        /* 快捷添加栏修复：解决手机端溢出 */
         .quick-add-bar { background: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; display: flex; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); width: 100%; }
         .quick-input { flex: 2; border: 1px solid #ddd; padding: 8px; border-radius: 8px; font-size: 14px; min-width: 0; }
         .quick-price { flex: 1; border: 1px solid #ddd; padding: 8px; border-radius: 8px; font-size: 14px; text-align: right; min-width: 0; }
         .add-btn { background: #34c759; color: white; border: none; padding: 0 12px; border-radius: 8px; font-weight: bold; white-space: nowrap; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
+        /* 弹窗优化：解决遮挡问题 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 200; }
         .modal-overlay.open { display: flex; }
-        .modal-content { background: white; border-radius: 16px; width: 85%; max-width: 320px; padding: 20px; }
+        .modal-content { background: white; border-radius: 16px; width: 90%; max-width: 320px; padding: 20px; position: relative; }
         .modal-input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
         
+        /* 选品库中的操作按钮 */
+        .action-btn-group { display: flex; gap: 5px; align-items: center; }
+        .del-btn { color: #ff3b30; border: none; background: none; padding: 5px; font-size: 18px; }
+
         .primary-btn { background: #007aff; color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; font-size: 16px; margin-top: 10px; }
         .total-bar { background: rgba(0,0,0,0.85); color: white; padding: 15px; position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; z-index: 90; }
         
         #saveIndicator { position: fixed; top: 65px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; opacity: 0; transition: 0.3s; z-index: 99; }
         #saveIndicator.show { opacity: 1; }
-        .cat-dropdown { position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; width: 100%; max-height: 150px; overflow-y: auto; z-index: 110; display: none; }
-        .cat-option { padding: 12px; border-bottom: 1px solid #eee; }
+        
+        /* 分类下拉列表优化：防止遮挡保存按钮 */
+        .cat-dropdown { 
+            position: absolute; 
+            background: white; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            width: calc(100% - 40px); 
+            max-height: 120px; 
+            overflow-y: auto; 
+            z-index: 210; 
+            display: none; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .cat-option { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -111,8 +127,10 @@
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="modalTitle" style="margin-top:0;">编辑商品模板</h3>
         <input type="text" id="itemName" class="modal-input" placeholder="名称">
-        <input type="text" id="itemCat" class="modal-input" placeholder="分类" onfocus="showDropdown()">
-        <div id="catDropdown" class="cat-dropdown"></div>
+        <div style="position: relative;">
+            <input type="text" id="itemCat" class="modal-input" placeholder="分类 (点击查看已有)" onfocus="showDropdown()" autocomplete="off">
+            <div id="catDropdown" class="cat-dropdown"></div>
+        </div>
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button onclick="closeItemModal()" style="flex:1; padding:12px; border:none; border-radius:10px; background:#eee;">取消</button>
             <button onclick="saveItem()" class="primary-btn" style="flex:1; margin-top:0;">保存</button>
@@ -121,7 +139,6 @@
 </div>
 
 <script>
-    // --- 脚本逻辑完全保留，未做任何修改 ---
     const firebaseConfig = { 
         apiKey: "AIzaSyDJAa0lKtUVvp3fRsC27XkfqJ5JPpwVj54", 
         authDomain: "yeyekao.firebaseapp.com", 
@@ -183,7 +200,10 @@
                         <span>${item.qty}</span>
                         <button class="qty-btn" onclick="event.stopPropagation();changeQty('${cat}', ${idx}, 1)">+</button>
                     </div>
-                    <button style="border:none;background:none;color:#007aff;padding-left:10px;" onclick="event.stopPropagation();openItemModal('${cat}', ${idx})">✎</button>
+                    <div class="action-btn-group">
+                        <button style="border:none;background:none;color:#007aff;padding:5px;" onclick="event.stopPropagation();openItemModal('${cat}', ${idx})">✎</button>
+                        <button class="del-btn" onclick="event.stopPropagation();deleteItem('${cat}', ${idx})">×</button>
+                    </div>
                 `;
                 group.appendChild(row);
             });
@@ -268,11 +288,21 @@
     function toggleDone(idx, checked) { globalData.cartData[idx].purchased = checked; sync(); }
     function clearPurchased() { if(confirm("清除已买？")) { globalData.cartData = globalData.cartData.filter(i => !i.purchased); sync(); } }
     
+    // 删除功能
+    function deleteItem(cat, idx) {
+        if(confirm("确定删除这个商品模板吗？")) {
+            globalData.productTemplate[cat].splice(idx, 1);
+            if(globalData.productTemplate[cat].length === 0) delete globalData.productTemplate[cat];
+            sync();
+        }
+    }
+
     function openItemModal(cat = null, idx = null) {
         window.currentEditing = cat ? { cat, idx } : null;
         if (cat) { document.getElementById('itemName').value = globalData.productTemplate[cat][idx].name; document.getElementById('itemCat').value = cat; }
         else { document.getElementById('itemName').value = ''; document.getElementById('itemCat').value = ''; }
         document.getElementById('itemModal').classList.add('open');
+        document.getElementById('catDropdown').style.display = 'none';
     }
     function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); }
     function saveItem() {
@@ -296,6 +326,11 @@
         dropdown.style.display = 'block';
     }
     function selectCat(val) { document.getElementById('itemCat').value = val; document.getElementById('catDropdown').style.display = 'none'; }
+    
+    // 点击外部隐藏下拉框
+    document.addEventListener('click', function(e) {
+        if (e.target.id !== 'itemCat') document.getElementById('catDropdown').style.display = 'none';
+    });
 </script>
 </body>
 </html>
