@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>收入汇总-增强版</title>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.staticfile.org/firebase/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://cdn.staticfile.org/firebase/9.23.0/firebase-firestore-compat.js"></script>
     <style>
         body { font-family: -apple-system, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -59,7 +59,7 @@
                     allOrders.push({ id: doc.id, ...doc.data() });
                 });
                 render();
-            } catch(e) { document.getElementById('order-list').innerText = "加载失败"; }
+            } catch(e) { document.getElementById('order-list').innerText = "加载失败，请检查网络"; }
         }
 
         function render() {
@@ -139,7 +139,7 @@
         }
 
         async function deleteOrder(id) {
-            if(confirm("确定要删除这一单吗？删除后不可恢复")) {
+            if(confirm("确定要删除这一单吗？")) {
                 try {
                     await db.collection("orders").doc(id).delete();
                     loadData();
