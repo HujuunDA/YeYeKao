@@ -26,7 +26,7 @@
 </head>
 <body>
     <div class="header">
-        <a href="点单.html" class="back-btn">← 返回点单</a>
+        <a href="index.html" class="back-btn">← 返回首页</a>
         <div style="display:flex; gap:10px;">
             <button onclick="exportData()" style="padding:10px; border:none; background:#eee; border-radius:10px;">导出 CSV</button>
             <button onclick="clearData()" style="padding:10px; border:none; background:#ffebeb; color:red; border-radius:10px;">清空</button>
@@ -68,7 +68,6 @@
             const statTitle = document.getElementById('stat-title');
             const now = new Date();
 
-            // 1. 销量排行模式
             if (currentFilter === 'rank') {
                 statTitle.innerText = "累计销量排行";
                 let rankMap = {};
@@ -90,7 +89,6 @@
                 return;
             }
 
-            // 2. 普通订单列表模式
             statTitle.innerText = "合计营收";
             const filtered = allOrders.filter(o => {
                 if(!o.timestamp) return false;
